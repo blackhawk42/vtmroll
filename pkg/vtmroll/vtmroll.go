@@ -2,6 +2,7 @@ package vtmroll
 
 import (
 	"fmt"
+	"iter"
 	"math/rand/v2"
 )
 
@@ -198,7 +199,7 @@ func (vtmres *VTMRollerResult) GetRolls() []int {
 }
 
 // GetHungerDice returns the count of hunger dice in this roll.
-func (vtmres *VTMRollerResult) GetHungerDice() int {
+func (vtmres *VTMRollerResult) HungerDice() int {
 	return vtmres.hungerDice
 }
 
@@ -207,6 +208,19 @@ func (vtmres *VTMRollerResult) GetRollTypes() []RollType {
 	rollTypes := make([]RollType, len(vtmres.rollTypes))
 	copy(rollTypes, vtmres.rollTypes)
 	return rollTypes
+}
+
+// Rolls returns an iterator over each die's roll value and RollType classification.
+//
+// The iterator yields (rollValue, rollType) pairs in die order. Hunger dice come first.
+func (vtmres *VTMRollerResult) Rolls() iter.Seq2[int, RollType] {
+	return func(yield func(int, RollType) bool) {
+		for i := range vtmres.rolls {
+			if !yield(vtmres.rolls[i], vtmres.rollTypes[i]) {
+				return
+			}
+		}
+	}
 }
 
 // VTMRoller executes dice rolls for Vampire: The Masquerade 5th Edition using a configured threshold and die range.

@@ -2,6 +2,7 @@ package vtmroll
 
 import (
 	"math/rand/v2"
+	"slices"
 	"testing"
 )
 
@@ -392,6 +393,79 @@ func TestDifferentLimitsManualTests(t *testing.T) {
 				t.Errorf("%s: expected %d successes, got %d", tt.name, tt.expectedSuccesses, result.Successes())
 			}
 		})
+	}
+}
+
+func TestRollsIterator(t *testing.T) {
+	roller := NewVTMRoller()
+	roller.SuccessThreshold = 6
+
+	tests := []struct {
+		name           string
+		rolls          []int
+		hungerDice     int
+		expectedRolls  []int
+		expectedTypes  []RollType
+	}{
+		{
+			name:          "Mixed hunger and normal dice",
+			rolls:         []int{10, 1, 8, 3, 6},
+			hungerDice:    2,
+			expectedRolls: []int{10, 1, 8, 3, 6},
+			expectedTypes: []RollType{HalfMessyCritical, PossibleBestialFailure, NormalSuccess, NormalFailure, NormalSuccess},
+		},
+		{
+			name:          "No hunger dice",
+			rolls:         []int{10, 10, 6, 3},
+			hungerDice:    0,
+			expectedRolls: []int{10, 10, 6, 3},
+			expectedTypes: []RollType{HalfCritical, HalfCritical, NormalSuccess, NormalFailure},
+		},
+		{
+			name:          "All hunger dice",
+			rolls:         []int{6, 7, 1},
+			hungerDice:    3,
+			expectedRolls: []int{6, 7, 1},
+			expectedTypes: []RollType{HungerSuccess, HungerSuccess, PossibleBestialFailure},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewVTMRollerResult(tt.rolls, roller, tt.hungerDice)
+
+			var gotRolls []int
+			var gotTypes []RollType
+			for roll, rt := range result.Rolls() {
+				gotRolls = append(gotRolls, roll)
+				gotTypes = append(gotTypes, rt)
+			}
+
+			if !slices.Equal(gotRolls, tt.expectedRolls) {
+				t.Errorf("rolls: got %v, want %v", gotRolls, tt.expectedRolls)
+			}
+			if !slices.Equal(gotTypes, tt.expectedTypes) {
+				t.Errorf("rollTypes: got %v, want %v", gotTypes, tt.expectedTypes)
+			}
+		})
+	}
+}
+
+func TestRollsIteratorEarlyBreak(t *testing.T) {
+	roller := NewVTMRoller()
+	roller.SuccessThreshold = 6
+	result := NewVTMRollerResult([]int{10, 1, 8, 3, 6}, roller, 2)
+
+	count := 0
+	for range result.Rolls() {
+		count++
+		if count == 2 {
+			break
+		}
+	}
+
+	if count != 2 {
+		t.Errorf("expected 2 iterations after break, got %d", count)
 	}
 }
 

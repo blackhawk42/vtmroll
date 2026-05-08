@@ -14,7 +14,7 @@ go test ./...
 ## Project Structure
 
 - `pkg/vtmroll/`: Core dice-rolling logic
-  - `vtmroll.go`: `VTMRoller` (roll executor) and `VTMRollerResult` (result container with public getter methods)
+  - `vtmroll.go`: `VTMRoller` (roll executor), `VTMRollerResult` (result container with public getter methods), and `RollType` (per-die classification enum)
   - `vtmroll_test.go`: Comprehensive test suite covering all game rules
 - `pkg/vtmrollfmt/`: Formatting and display utilities for roll results (in development)
 
@@ -28,12 +28,15 @@ go test ./...
 ### Critical & Special Outcomes
 - **Critical (pair)**: 2+ rolls at `RollUpperLimit` → each complete pair grants 2 bonus successes
 - **Messy critical**: Critical where at least one half-critical is from a hunger die
-- **Bestial failure**: Total failure (0 successes) with at least one hunger die
+- **Bestial failure**: Total failure (0 successes) with at least one hunger die that rolled the lower limit (a 1 on standard d10)
 - **Reroll rules**: Cannot reroll hunger dice; validates reroll indices strictly
 
 ### Result Calculation
-- `Successes()` = raw successes + (half-criticals / 2) * 2
+- Each die gets exactly one `RollType` (mutually exclusive): `NormalSuccess`, `NormalFailure`, `HungerSuccess`, `HungerFailure`, `HalfCritical`, `HalfMessyCritical`, or `PossibleBestialFailure`
+- `Successes()` = normal successes + half-criticals + hunger successes + half-messy-criticals + bonus from complete pairs of half-criticals
+- `Failures()` = normal failures + hunger failures + possible bestial failures
 - Hunger dice always occupy the first N positions in the roll slice
+- `PossibleBestialFailure` only applies to hunger dice that rolled the lower limit (not all failed hunger dice)
 
 ## Testing Strategy
 

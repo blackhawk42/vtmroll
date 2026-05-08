@@ -5,16 +5,66 @@ import (
 	"math/rand/v2"
 )
 
+// RollType classifies each die in a VTM roll pool. Each die has exactly one RollType,
+// determined by its position (hunger vs. normal) and its rolled value.
+// The types are mutually exclusive: a die is one of NormalSuccess, NormalFailure,
+// HungerSuccess, HungerFailure, HalfCritical, HalfMessyCritical, or PossibleBestialFailure.
+type RollType int
+
+const (
+	// NormalSuccess is a non-hunger die that met the success threshold but is not a half-critical.
+	NormalSuccess RollType = iota
+	// NormalFailure is a non-hunger die that failed to meet the success threshold.
+	NormalFailure
+	// HungerSuccess is a hunger die that met the success threshold but is not a half-critical.
+	HungerSuccess
+	// HungerFailure is a hunger die that failed to meet the success threshold and did not roll the lower limit.
+	HungerFailure
+	// HalfCritical is a non-hunger die that rolled the upper limit (e.g., 10 on a d10).
+	// Two or more half-criticals form a critical pair, granting bonus successes.
+	HalfCritical
+	// HalfMessyCritical is a hunger die that rolled the upper limit.
+	// If a critical includes at least one half-messy-critical, the result is a messy critical.
+	HalfMessyCritical
+	// PossibleBestialFailure is a hunger die that rolled the lower limit (e.g., 1 on a d10).
+	// In a total failure, any possible bestial failure makes the result a bestial failure.
+	PossibleBestialFailure
+)
+
+// String returns a human-readable name for the RollType.
+func (rt RollType) String() string {
+	switch rt {
+	case NormalSuccess:
+		return "NormalSuccess"
+	case NormalFailure:
+		return "NormalFailure"
+	case HungerSuccess:
+		return "HungerSuccess"
+	case HungerFailure:
+		return "HungerFailure"
+	case HalfCritical:
+		return "HalfCritical"
+	case HalfMessyCritical:
+		return "HalfMessyCritical"
+	case PossibleBestialFailure:
+		return "PossibleBestialFailure"
+	default:
+		return fmt.Sprintf("RollType(%d)", int(rt))
+	}
+}
+
 // VTMRollerResult holds the outcome of a single dice roll for Vampire: The Masquerade 5th Edition.
 // It contains the individual die results and computed locations of successes, criticals, and special failure states.
 type VTMRollerResult struct {
-	rolls                           []int
-	hungerDice                      int
-	rawSuccessesLocations           []int
-	failuresLocations               []int
-	possibleBestialFailureLocations []int
-	halfCriticalsLocations          []int
-	halfMessyCriticalLocations      []int
+	rolls            []int
+	hungerDice       int
+	rollTypes        []RollType
+	successes        int
+	failures         int
+	isCritical       bool
+	isTotalFailure   bool
+	isBestialFailure bool
+	isMessyCritical  bool
 }
 
 func lastPair(n int) int {
@@ -31,27 +81,63 @@ func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) *VTMRoller
 	result := &VTMRollerResult{
 		rolls:      rolls,
 		hungerDice: hungerDice,
+		rollTypes:  make([]RollType, len(rolls)),
 	}
+
+	var normalSuccesses int
+	var normalFailures int
+	var hungerSuccesses int
+	var hungerFailures int
+	var halfCriticals int
+	var halfMessyCriticals int
+	var possibleBestialFailures int
 
 	for i, roll := range rolls {
-		if vtmr.isSuccess(roll) {
-			result.rawSuccessesLocations = append(result.rawSuccessesLocations, i)
-		} else {
-			result.failuresLocations = append(result.failuresLocations, i)
-
-			if i < hungerDice {
-				result.possibleBestialFailureLocations = append(result.possibleBestialFailureLocations, i)
+		if i < hungerDice {
+			switch {
+			case vtmr.isUpperLimit(roll):
+				result.rollTypes[i] = HalfMessyCritical
+				halfMessyCriticals++
+			case vtmr.isLowerLimit(roll):
+				result.rollTypes[i] = PossibleBestialFailure
+				possibleBestialFailures++
+			case vtmr.isSuccess(roll):
+				result.rollTypes[i] = HungerSuccess
+				hungerSuccesses++
+			default:
+				result.rollTypes[i] = HungerFailure
+				hungerFailures++
 			}
-		}
-
-		if roll == vtmr.RollUpperLimit {
-			result.halfCriticalsLocations = append(result.halfCriticalsLocations, i)
-
-			if i < hungerDice {
-				result.halfMessyCriticalLocations = append(result.halfMessyCriticalLocations, i)
+		} else {
+			switch {
+			case vtmr.isUpperLimit(roll):
+				result.rollTypes[i] = HalfCritical
+				halfCriticals++
+			case vtmr.isSuccess(roll):
+				result.rollTypes[i] = NormalSuccess
+				normalSuccesses++
+			default:
+				result.rollTypes[i] = NormalFailure
+				normalFailures++
 			}
 		}
 	}
+
+	result.successes = normalSuccesses +
+		halfCriticals +
+		hungerSuccesses +
+		halfMessyCriticals +
+		lastPair(halfCriticals+halfMessyCriticals)
+
+	result.failures = normalFailures + hungerFailures + possibleBestialFailures
+
+	result.isCritical = (halfCriticals + halfMessyCriticals) >= 2
+
+	result.isTotalFailure = result.successes == 0
+
+	result.isBestialFailure = result.isTotalFailure && (possibleBestialFailures >= 1)
+
+	result.isMessyCritical = result.isCritical && (halfMessyCriticals >= 1)
 
 	return result
 }
@@ -59,33 +145,35 @@ func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) *VTMRoller
 // Successes returns the total number of successes, including raw successes and bonus successes from critical pairs.
 // Each complete pair of half-criticals (rolls at RollUpperLimit) grants 2 bonus successes.
 func (vtmres *VTMRollerResult) Successes() int {
-	return len(vtmres.rawSuccessesLocations) + lastPair(len(vtmres.halfCriticalsLocations))
+	return vtmres.successes
+}
+
+// Failures returns the total number of dice that did not meet the success threshold,
+// including hunger failures and possible bestial failures.
+func (vtmres *VTMRollerResult) Failures() int {
+	return vtmres.failures
 }
 
 // IsCritical reports whether the roll achieved a critical success (two or more half-criticals).
 func (vtmres *VTMRollerResult) IsCritical() bool {
-	return len(vtmres.halfCriticalsLocations) >= 2
+	return vtmres.isCritical
 }
 
 // IsTotalFailure reports whether the roll resulted in zero successes.
 func (vtmres *VTMRollerResult) IsTotalFailure() bool {
-	return len(vtmres.rawSuccessesLocations) == 0
+	return vtmres.isTotalFailure
 }
 
 // IsBestialFailure reports whether the roll is a total failure with at least one hunger die involved.
 // This represents a catastrophic failure in VTM 5e that triggers the Beast.
 func (vtmres *VTMRollerResult) IsBestialFailure() bool {
-	return vtmres.IsTotalFailure() && len(vtmres.possibleBestialFailureLocations) > 0
+	return vtmres.isBestialFailure
 }
 
 // IsMessyCritical reports whether the roll achieved a critical success where at least one half-critical came from a hunger die.
 // This represents an unpredictable critical in VTM 5e that deals collateral damage.
 func (vtmres *VTMRollerResult) IsMessyCritical() bool {
-	if !vtmres.IsCritical() {
-		return false
-	}
-
-	return len(vtmres.halfMessyCriticalLocations) > 0
+	return vtmres.isMessyCritical
 }
 
 // GetRolls returns a copy of all individual die rolls in order.
@@ -100,32 +188,11 @@ func (vtmres *VTMRollerResult) GetHungerDice() int {
 	return vtmres.hungerDice
 }
 
-// GetRawSuccessesLocations returns a copy of indices where rolls met or exceeded the success threshold.
-func (vtmres *VTMRollerResult) GetRawSuccessesLocations() []int {
-	locations := make([]int, len(vtmres.rawSuccessesLocations))
-	copy(locations, vtmres.rawSuccessesLocations)
-	return locations
-}
-
-// GetHalfCriticalsLocations returns a copy of indices where rolls matched the upper limit (half-criticals).
-func (vtmres *VTMRollerResult) GetHalfCriticalsLocations() []int {
-	locations := make([]int, len(vtmres.halfCriticalsLocations))
-	copy(locations, vtmres.halfCriticalsLocations)
-	return locations
-}
-
-// GetHalfMessyCriticalLocations returns a copy of indices where hunger dice rolled the upper limit.
-func (vtmres *VTMRollerResult) GetHalfMessyCriticalLocations() []int {
-	locations := make([]int, len(vtmres.halfMessyCriticalLocations))
-	copy(locations, vtmres.halfMessyCriticalLocations)
-	return locations
-}
-
-// GetPossibleBestialFailureLocations returns a copy of indices where hunger dice failed to meet the threshold.
-func (vtmres *VTMRollerResult) GetPossibleBestialFailureLocations() []int {
-	locations := make([]int, len(vtmres.possibleBestialFailureLocations))
-	copy(locations, vtmres.possibleBestialFailureLocations)
-	return locations
+// GetRollTypes returns a copy of the RollType classification for each die in order.
+func (vtmres *VTMRollerResult) GetRollTypes() []RollType {
+	rollTypes := make([]RollType, len(vtmres.rollTypes))
+	copy(rollTypes, vtmres.rollTypes)
+	return rollTypes
 }
 
 // VTMRoller executes dice rolls for Vampire: The Masquerade 5th Edition using a configured threshold and die range.

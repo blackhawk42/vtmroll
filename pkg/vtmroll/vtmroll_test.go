@@ -1,7 +1,6 @@
 package vtmroll
 
 import (
-	"fmt"
 	"math/rand/v2"
 	"testing"
 )
@@ -33,44 +32,6 @@ func TestSuccessesCalculation(t *testing.T) {
 
 	// Reset threshold
 	roller.SuccessThreshold = 6
-}
-
-func TestCriticalLogic(t *testing.T) {
-	// Create a roller with predictable output
-	roller := NewVTMRoller()
-	roller.Rand = rand.New(rand.NewPCG(0, 0))
-
-	// Note: actual results depend on RNG seed
-	result := roller.Roll(10, 3)
-	fmt.Printf("Debug: halfCriticals = %d, IsCritical() = %v\n", len(result.halfCriticalsLocations), result.IsCritical())
-
-	// Test that IsCritical returns true when there are at least 2 half-criticals
-	// This is a sanity check
-	if len(result.halfCriticalsLocations) >= 2 && !result.IsCritical() {
-		t.Errorf("Expected critical with %d half-criticals", len(result.halfCriticalsLocations))
-	}
-}
-
-func TestHungerDiceLogic(t *testing.T) {
-	roller := NewVTMRoller()
-	roller.Rand = rand.New(rand.NewPCG(0, 0))
-
-	// Test that hunger dice are the first N dice
-	result := roller.Roll(10, 3)
-
-	// Check that possibleBestialFailureLocations only contains indices < 3
-	for _, idx := range result.possibleBestialFailureLocations {
-		if idx >= 3 {
-			t.Errorf("possibleBestialFailureLocations contains index %d, should be < 3", idx)
-		}
-	}
-
-	// Check that halfMessyCriticalLocations only contains indices < 3
-	for _, idx := range result.halfMessyCriticalLocations {
-		if idx >= 3 {
-			t.Errorf("halfMessyCriticalLocations contains index %d, should be < 3", idx)
-		}
-	}
 }
 
 func TestReRollValidation(t *testing.T) {
@@ -284,6 +245,14 @@ func TestBestialFailureManualTests(t *testing.T) {
 		{
 			name:                   "Edge case: threshold 10 with all 9s",
 			rolls:                  []int{9, 9, 9, 9, 9},
+			hungerDice:             2,
+			threshold:              10,
+			expectedIsTotalFailure: true,
+			expectedIsBestial:      false,
+		},
+		{
+			name:                   "Edge case: threshold 10 with all 9s except first is 1",
+			rolls:                  []int{1, 9, 9, 9, 9},
 			hungerDice:             2,
 			threshold:              10,
 			expectedIsTotalFailure: true,

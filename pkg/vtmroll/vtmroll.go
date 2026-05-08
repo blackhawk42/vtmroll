@@ -5,8 +5,9 @@ import (
 	"math/rand/v2"
 )
 
-// RollType classifies each die in a VTM roll pool. Each die has exactly one RollType,
-// determined by its position (hunger vs. normal) and its rolled value.
+// RollType classifies each die in a VTM roll pool.
+//
+// Each die has exactly one RollType, determined by its position (hunger vs. normal) and its rolled value.
 // The types are mutually exclusive: a die is one of NormalSuccess, NormalFailure,
 // HungerSuccess, HungerFailure, HalfCritical, HalfMessyCritical, or PossibleBestialFailure.
 type RollType int
@@ -14,19 +15,27 @@ type RollType int
 const (
 	// NormalSuccess is a non-hunger die that met the success threshold but is not a half-critical.
 	NormalSuccess RollType = iota
+
 	// NormalFailure is a non-hunger die that failed to meet the success threshold.
 	NormalFailure
+
 	// HungerSuccess is a hunger die that met the success threshold but is not a half-critical.
 	HungerSuccess
+
 	// HungerFailure is a hunger die that failed to meet the success threshold and did not roll the lower limit.
 	HungerFailure
+
 	// HalfCritical is a non-hunger die that rolled the upper limit (e.g., 10 on a d10).
 	// Two or more half-criticals form a critical pair, granting bonus successes.
 	HalfCritical
+
 	// HalfMessyCritical is a hunger die that rolled the upper limit.
+	//
 	// If a critical includes at least one half-messy-critical, the result is a messy critical.
 	HalfMessyCritical
+
 	// PossibleBestialFailure is a hunger die that rolled the lower limit (e.g., 1 on a d10).
+	//
 	// In a total failure, any possible bestial failure makes the result a bestial failure.
 	PossibleBestialFailure
 )
@@ -54,6 +63,7 @@ func (rt RollType) String() string {
 }
 
 // VTMRollerResult holds the outcome of a single dice roll for Vampire: The Masquerade 5th Edition.
+//
 // It contains the individual die results and computed locations of successes, criticals, and special failure states.
 type VTMRollerResult struct {
 	rolls            []int
@@ -76,6 +86,7 @@ func lastPair(n int) int {
 }
 
 // NewVTMRollerResult constructs a VTMRollerResult by analyzing the given rolls against the roller's configuration.
+//
 // It computes all success locations, critical pairs, and special failure conditions based on the threshold and upper limit.
 func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) *VTMRollerResult {
 	result := &VTMRollerResult{
@@ -143,6 +154,7 @@ func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) *VTMRoller
 }
 
 // Successes returns the total number of successes, including raw successes and bonus successes from critical pairs.
+//
 // Each complete pair of half-criticals (rolls at RollUpperLimit) grants 2 bonus successes.
 func (vtmres *VTMRollerResult) Successes() int {
 	return vtmres.successes
@@ -165,12 +177,14 @@ func (vtmres *VTMRollerResult) IsTotalFailure() bool {
 }
 
 // IsBestialFailure reports whether the roll is a total failure with at least one hunger die involved.
+//
 // This represents a catastrophic failure in VTM 5e that triggers the Beast.
 func (vtmres *VTMRollerResult) IsBestialFailure() bool {
 	return vtmres.isBestialFailure
 }
 
 // IsMessyCritical reports whether the roll achieved a critical success where at least one half-critical came from a hunger die.
+//
 // This represents an unpredictable critical in VTM 5e that deals collateral damage.
 func (vtmres *VTMRollerResult) IsMessyCritical() bool {
 	return vtmres.isMessyCritical
@@ -250,6 +264,7 @@ func (vtmr *VTMRoller) RollDie() int {
 }
 
 // Roll performs a dice roll with the given pool size and hunger dice count.
+//
 // Hunger dice count is clamped to [0, pool]. The returned result contains all roll details,
 // computed successes, and special outcome states.
 func (vtmr *VTMRoller) Roll(pool int, hungerDice int) *VTMRollerResult {
@@ -272,6 +287,7 @@ func (vtmr *VTMRoller) Roll(pool int, hungerDice int) *VTMRollerResult {
 }
 
 // ReRoll re-rolls specified dice from a prior roll, creating a new result with updated outcomes.
+//
 // Hunger dice cannot be rerolled. Indices must be valid (0-based, within pool size, and not hunger dice).
 // Returns an error if any index is invalid or refers to a hunger die.
 func (vtmr *VTMRoller) ReRoll(oldResult *VTMRollerResult, rerollPlaces ...int) (*VTMRollerResult, error) {

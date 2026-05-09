@@ -49,12 +49,9 @@ func TestReRollValidation(t *testing.T) {
 	}
 
 	// Test rerolling a non-hunger die (should succeed)
-	newResult, err := roller.ReRoll(result, 3) // Index 3 is not a hunger die
+	_, err = roller.ReRoll(result, 3) // Index 3 is not a hunger die
 	if err != nil {
 		t.Errorf("Unexpected error when rerolling non-hunger die: %v", err)
-	}
-	if newResult == nil {
-		t.Error("Expected new result from reroll")
 	}
 
 	// Test rerolling with invalid index (should fail)
@@ -401,11 +398,11 @@ func TestRollsIterator(t *testing.T) {
 	roller.SuccessThreshold = 6
 
 	tests := []struct {
-		name           string
-		rolls          []int
-		hungerDice     int
-		expectedRolls  []int
-		expectedTypes  []RollType
+		name          string
+		rolls         []int
+		hungerDice    int
+		expectedRolls []int
+		expectedTypes []RollType
 	}{
 		{
 			name:          "Mixed hunger and normal dice",
@@ -540,11 +537,6 @@ func TestReRollManualTests(t *testing.T) {
 
 			if err != nil {
 				t.Errorf("%s: unexpected error: %v", tt.name, err)
-				return
-			}
-
-			if newResult == nil {
-				t.Errorf("%s: newResult is nil", tt.name)
 				return
 			}
 

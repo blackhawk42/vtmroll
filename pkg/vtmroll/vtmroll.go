@@ -27,6 +27,7 @@ const (
 	HungerFailure
 
 	// HalfCritical is a non-hunger die that rolled the upper limit (e.g., 10 on a d10).
+	//
 	// Two or more half-criticals form a critical pair, granting bonus successes.
 	HalfCritical
 
@@ -89,8 +90,8 @@ func lastPair(n int) int {
 // NewVTMRollerResult constructs a VTMRollerResult by analyzing the given rolls against the roller's configuration.
 //
 // It computes all success locations, critical pairs, and special failure conditions based on the threshold and upper limit.
-func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) *VTMRollerResult {
-	result := &VTMRollerResult{
+func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) VTMRollerResult {
+	result := VTMRollerResult{
 		rolls:      rolls,
 		hungerDice: hungerDice,
 		rollTypes:  make([]RollType, len(rolls)),
@@ -157,54 +158,54 @@ func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) *VTMRoller
 // Successes returns the total number of successes, including raw successes and bonus successes from critical pairs.
 //
 // Each complete pair of half-criticals (rolls at RollUpperLimit) grants 2 bonus successes.
-func (vtmres *VTMRollerResult) Successes() int {
+func (vtmres VTMRollerResult) Successes() int {
 	return vtmres.successes
 }
 
 // Failures returns the total number of dice that did not meet the success threshold,
 // including hunger failures and possible bestial failures.
-func (vtmres *VTMRollerResult) Failures() int {
+func (vtmres VTMRollerResult) Failures() int {
 	return vtmres.failures
 }
 
 // IsCritical reports whether the roll achieved a critical success (two or more half-criticals).
-func (vtmres *VTMRollerResult) IsCritical() bool {
+func (vtmres VTMRollerResult) IsCritical() bool {
 	return vtmres.isCritical
 }
 
 // IsTotalFailure reports whether the roll resulted in zero successes.
-func (vtmres *VTMRollerResult) IsTotalFailure() bool {
+func (vtmres VTMRollerResult) IsTotalFailure() bool {
 	return vtmres.isTotalFailure
 }
 
 // IsBestialFailure reports whether the roll is a total failure with at least one hunger die involved.
 //
 // This represents a catastrophic failure in VTM 5e that triggers the Beast.
-func (vtmres *VTMRollerResult) IsBestialFailure() bool {
+func (vtmres VTMRollerResult) IsBestialFailure() bool {
 	return vtmres.isBestialFailure
 }
 
 // IsMessyCritical reports whether the roll achieved a critical success where at least one half-critical came from a hunger die.
 //
 // This represents an unpredictable critical in VTM 5e that deals collateral damage.
-func (vtmres *VTMRollerResult) IsMessyCritical() bool {
+func (vtmres VTMRollerResult) IsMessyCritical() bool {
 	return vtmres.isMessyCritical
 }
 
 // GetRolls returns a copy of all individual die rolls in order.
-func (vtmres *VTMRollerResult) GetRolls() []int {
+func (vtmres VTMRollerResult) GetRolls() []int {
 	rolls := make([]int, len(vtmres.rolls))
 	copy(rolls, vtmres.rolls)
 	return rolls
 }
 
 // GetHungerDice returns the count of hunger dice in this roll.
-func (vtmres *VTMRollerResult) HungerDice() int {
+func (vtmres VTMRollerResult) HungerDice() int {
 	return vtmres.hungerDice
 }
 
 // GetRollTypes returns a copy of the RollType classification for each die in order.
-func (vtmres *VTMRollerResult) GetRollTypes() []RollType {
+func (vtmres VTMRollerResult) GetRollTypes() []RollType {
 	rollTypes := make([]RollType, len(vtmres.rollTypes))
 	copy(rollTypes, vtmres.rollTypes)
 	return rollTypes
@@ -213,7 +214,7 @@ func (vtmres *VTMRollerResult) GetRollTypes() []RollType {
 // Rolls returns an iterator over each die's roll value and RollType classification.
 //
 // The iterator yields (rollValue, rollType) pairs in die order. Hunger dice come first.
-func (vtmres *VTMRollerResult) Rolls() iter.Seq2[int, RollType] {
+func (vtmres VTMRollerResult) Rolls() iter.Seq2[int, RollType] {
 	return func(yield func(int, RollType) bool) {
 		for i := range vtmres.rolls {
 			if !yield(vtmres.rolls[i], vtmres.rollTypes[i]) {
@@ -221,6 +222,11 @@ func (vtmres *VTMRollerResult) Rolls() iter.Seq2[int, RollType] {
 			}
 		}
 	}
+}
+
+// Len returns the amount of rolls in the result (the length).
+func (vtmres VTMRollerResult) Len() int {
+	return len(vtmres.rolls)
 }
 
 // VTMRoller executes dice rolls for Vampire: The Masquerade 5th Edition using a configured threshold and die range.
@@ -281,7 +287,7 @@ func (vtmr *VTMRoller) RollDie() int {
 //
 // Hunger dice count is clamped to [0, pool]. The returned result contains all roll details,
 // computed successes, and special outcome states.
-func (vtmr *VTMRoller) Roll(pool int, hungerDice int) *VTMRollerResult {
+func (vtmr *VTMRoller) Roll(pool int, hungerDice int) VTMRollerResult {
 	// Validate hungerDice parameter
 	if hungerDice < 0 {
 		hungerDice = 0
@@ -304,17 +310,17 @@ func (vtmr *VTMRoller) Roll(pool int, hungerDice int) *VTMRollerResult {
 //
 // Hunger dice cannot be rerolled. Indices must be valid (0-based, within pool size, and not hunger dice).
 // Returns an error if any index is invalid or refers to a hunger die.
-func (vtmr *VTMRoller) ReRoll(oldResult *VTMRollerResult, rerollPlaces ...int) (*VTMRollerResult, error) {
+func (vtmr *VTMRoller) ReRoll(oldResult VTMRollerResult, rerollPlaces ...int) (VTMRollerResult, error) {
 	newRolls := make([]int, len(oldResult.rolls))
 	copy(newRolls, oldResult.rolls)
 
 	for _, rp := range rerollPlaces {
 		if rp < oldResult.hungerDice {
-			return nil, fmt.Errorf("cannot reroll hunger die (hunger: %d, offset %d)", oldResult.hungerDice, rp)
+			return VTMRollerResult{}, fmt.Errorf("cannot reroll hunger die (hunger: %d, offset %d)", oldResult.hungerDice, rp)
 		}
 
 		if rp >= len(newRolls) {
-			return nil, fmt.Errorf("offset greater than or equal to rolls (len: %d, offset: %d)", len(newRolls), rp)
+			return VTMRollerResult{}, fmt.Errorf("offset greater than or equal to rolls (len: %d, offset: %d)", len(newRolls), rp)
 		}
 
 		newRolls[rp] = vtmr.RollDie()

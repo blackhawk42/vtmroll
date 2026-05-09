@@ -14,7 +14,7 @@ go test ./...
 ## Project Structure
 
 - `pkg/vtmroll/`: Core dice-rolling logic
-  - `vtmroll.go`: `VTMRoller` (roll executor), `VTMRollerResult` (result container with public getter methods), and `RollType` (per-die classification enum)
+  - `vtmroll.go`: `VTMRoller` (roll executor), `VTMRollerResult` (result container with public getter methods; passed by value, not usually by reference), and `RollType` (per-die classification enum)
   - `vtmroll_test.go`: Comprehensive test suite covering all game rules
 - `pkg/vtmrollfmt/`: Formatting and display utilities for roll results (in development)
 
@@ -49,7 +49,7 @@ Key test patterns:
 
 ## Important Implementation Notes
 
-- **Result immutability**: `Get*()` methods return copies, not references, to prevent external mutations
+- **Result immutability**: `Get()` methods return copies, not references, to prevent external mutations
 - **Default RNG initialization**: `NewVTMRoller()` creates a new random source with `rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))`, ensuring each roller instance has a unique sequence by default
 - **RNG override for reproducible results**: The `Rand` field is public. Tests and code needing repeatable rolls can override it: `roller.Rand = rand.New(rand.NewPCG(0, 0))`. Set this before calling `Roll()`.
 - **Hunger clamping**: `Roll(pool, hungerDice)` clamps hunger to `[0, pool]`

@@ -108,13 +108,13 @@ func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) VTMRollerR
 	for i, roll := range rolls {
 		if i < hungerDice {
 			switch {
-			case vtmr.isUpperLimit(roll):
+			case vtmr.IsUpperLimit(roll):
 				result.rollTypes[i] = HalfMessyCritical
 				halfMessyCriticals++
-			case vtmr.isLowerLimit(roll):
+			case vtmr.IsLowerLimit(roll):
 				result.rollTypes[i] = PossibleBestialFailure
 				possibleBestialFailures++
-			case vtmr.isSuccess(roll):
+			case vtmr.IsSuccess(roll):
 				result.rollTypes[i] = HungerSuccess
 				hungerSuccesses++
 			default:
@@ -123,10 +123,10 @@ func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) VTMRollerR
 			}
 		} else {
 			switch {
-			case vtmr.isUpperLimit(roll):
+			case vtmr.IsUpperLimit(roll):
 				result.rollTypes[i] = HalfCritical
 				halfCriticals++
-			case vtmr.isSuccess(roll):
+			case vtmr.IsSuccess(roll):
 				result.rollTypes[i] = NormalSuccess
 				normalSuccesses++
 			default:
@@ -266,15 +266,20 @@ func NewVTMRoller() *VTMRoller {
 	}
 }
 
-func (vtmr *VTMRoller) isSuccess(roll int) bool {
+// IsSuccess reports whether the given roll meets or exceeds the success threshold.
+func (vtmr *VTMRoller) IsSuccess(roll int) bool {
 	return roll >= vtmr.SuccessThreshold
 }
 
-func (vtmr *VTMRoller) isUpperLimit(roll int) bool {
+// IsUpperLimit reports whether the given roll equals the upper limit of the die range,
+// indicating a potential critical result.
+func (vtmr *VTMRoller) IsUpperLimit(roll int) bool {
 	return roll == vtmr.RollUpperLimit
 }
 
-func (vtmr *VTMRoller) isLowerLimit(roll int) bool {
+// IsLowerLimit reports whether the given roll equals the lower limit of the die range,
+// indicating a potential bestial failure for hunger dice.
+func (vtmr *VTMRoller) IsLowerLimit(roll int) bool {
 	return roll == vtmr.RollLowerLimit
 }
 

@@ -67,6 +67,8 @@ func (rt RollType) String() string {
 // VTMRollerResult holds the outcome of a single dice roll for Vampire: The Masquerade 5th Edition.
 //
 // It contains the individual die results and computed locations of successes, criticals, and special failure states.
+//
+// Designed to be an immutable data structure. Prefer copies to references.
 type VTMRollerResult struct {
 	rolls            []int
 	hungerDice       int
@@ -90,9 +92,14 @@ func lastPair(n int) int {
 // NewVTMRollerResult constructs a VTMRollerResult by analyzing the given rolls against the roller's configuration.
 //
 // It computes all success locations, critical pairs, and special failure conditions based on the threshold and upper limit.
+//
+// rolls is copied internally, so modifying the original will not alter the final struct.
 func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) VTMRollerResult {
+	innerRolls := make([]int, len(rolls))
+	copy(innerRolls, rolls)
+
 	result := VTMRollerResult{
-		rolls:      rolls,
+		rolls:      innerRolls,
 		hungerDice: hungerDice,
 		rollTypes:  make([]RollType, len(rolls)),
 	}

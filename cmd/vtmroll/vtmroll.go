@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/blackhawk42/vtmroll/pkg/vtmroll"
@@ -24,10 +25,10 @@ func main() {
 	// })
 
 	var formatter vtmrollfmt.VTMRollResultDiceFormatter = fmtbuiltins.NewDiceFormatter(
-		fmtbuiltins.DEFAULT_FORMATFUNCTION_ASCII,
+		fmtbuiltins.DEFAULT_FORMATFUNCTION_CLASSIC_DETAILED,
 		fmtbuiltins.DEFAULT_DICESTYLE_ANSI,
-		// colorprofile.Detect(os.Stdout, os.Environ()),
-		colorprofile.NoTTY,
+		colorprofile.Detect(os.Stdout, os.Environ()),
+		// colorprofile.NoTTY,
 	)
 
 	for _ = range 10 {

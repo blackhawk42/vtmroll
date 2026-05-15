@@ -1,11 +1,11 @@
 package fmtbuiltins
 
 import (
-	"strconv"
 	"strings"
 
 	"charm.land/lipgloss/v2"
 	"github.com/blackhawk42/vtmroll/pkg/vtmroll"
+	"github.com/blackhawk42/vtmroll/pkg/vtmrollfmt"
 	"github.com/charmbracelet/colorprofile"
 )
 
@@ -38,23 +38,23 @@ func NewDiceStyle() DiceStyles {
 }
 
 type DiceFormatter struct {
+	DiceStyles DiceStyles
+
 	colorprofileWriter *colorprofile.Writer
 	colorBuffer        *strings.Builder
 
-	formatFunction FormatFunction
-
-	DiceStyles DiceStyles
+	formatFunction DieFormatFunction
 }
 
-type FormatFunction func(roll int, rollType vtmroll.RollType) string
+type DieFormatFunction func(roll int, rollType vtmroll.RollType) string
 
 func NewDiceFormatter(
-	formatFunction FormatFunction,
+	formatFunction DieFormatFunction,
 	diceStyles DiceStyles,
 	colorProfile colorprofile.Profile,
 ) *DiceFormatter {
 	if formatFunction == nil {
-		formatFunction = func(roll int, rollType vtmroll.RollType) string { return strconv.Itoa(roll) }
+		formatFunction = BUILTIN_FORMATFUNCTION_NUMERIC
 	}
 
 	colorBuffer := new(strings.Builder)
@@ -109,4 +109,90 @@ func (fmtter *DiceFormatter) FormatDice(vtmres vtmroll.VTMRollerResult) []string
 	}
 
 	return results
+}
+
+type SummaryStyles struct {
+	SuccessesMessageStyle        lipgloss.Style
+	IsCriticalMessageStyle       lipgloss.Style
+	IsTotalFailureMessageStyle   lipgloss.Style
+	IsBestialFailureMessageStyle lipgloss.Style
+	IsMessyCriticalMessageStyle  lipgloss.Style
+}
+
+func NewSummaryStyles() SummaryStyles {
+	return SummaryStyles{
+		SuccessesMessageStyle:        lipgloss.NewStyle(),
+		IsCriticalMessageStyle:       lipgloss.NewStyle(),
+		IsTotalFailureMessageStyle:   lipgloss.NewStyle(),
+		IsBestialFailureMessageStyle: lipgloss.NewStyle(),
+		IsMessyCriticalMessageStyle:  lipgloss.NewStyle(),
+	}
+}
+
+type SummaryFormatFunction func(result vtmroll.VTMRollerResult) vtmrollfmt.VTMRollResultSummaryMessages
+
+type ResultSummarizer struct {
+	SummaryStyles SummaryStyles
+
+	summaryFormatFunction SummaryFormatFunction
+
+	colorprofileWriter *colorprofile.Writer
+	colorBuffer        *strings.Builder
+}
+
+func NewResultSummarizer(
+	summarizeStyles SummaryStyles,
+	summarSummaryFormatFunction SummaryFormatFunction,
+	colorProfile colorprofile.Profile,
+) *ResultSummarizer {
+	if summarSummaryFormatFunction == nil {
+		summarSummaryFormatFunction = BUILTIN_SUMMARYFORMATFUNCTION_SIMPLE
+	}
+
+	colorBuffer := new(strings.Builder)
+
+	colorprofileWriter := new(colorprofile.Writer)
+	colorprofileWriter.Forward = colorBuffer
+	colorprofileWriter.Profile = colorProfile
+
+	return &ResultSummarizer{
+		summaryFormatFunction: summarSummaryFormatFunction,
+		SummaryStyles:         summarizeStyles,
+		colorprofileWriter:    colorprofileWriter,
+		colorBuffer:           colorBuffer,
+	}
+}
+
+func (rsumm *ResultSummarizer) Summarize(vtmres vtmroll.VTMRollerResult) vtmrollfmt.VTMRollResultSummaryMessages {
+	summary := rsumm.summaryFormatFunction(vtmres)
+
+	rsumm.colorBuffer.Reset()
+	rsumm.colorprofileWriter.WriteString(rsumm.SummaryStyles.SuccessesMessageStyle.Render(summary.SuccessesMessage))
+	summary.SuccessesMessage = rsumm.colorBuffer.String()
+
+	if summary.IsCriticalMessage != "" {
+		rsumm.colorBuffer.Reset()
+		rsumm.colorprofileWriter.WriteString(rsumm.SummaryStyles.IsCriticalMessageStyle.Render(summary.IsCriticalMessage))
+		summary.IsCriticalMessage = rsumm.colorBuffer.String()
+	}
+
+	if summary.IsTotalFailureMessage != "" {
+		rsumm.colorBuffer.Reset()
+		rsumm.colorprofileWriter.WriteString(rsumm.SummaryStyles.IsTotalFailureMessageStyle.Render(summary.IsTotalFailureMessage))
+		summary.IsTotalFailureMessage = rsumm.colorBuffer.String()
+	}
+
+	if summary.IsBestialFailureMessage != "" {
+		rsumm.colorBuffer.Reset()
+		rsumm.colorprofileWriter.WriteString(rsumm.SummaryStyles.IsBestialFailureMessageStyle.Render(summary.IsBestialFailureMessage))
+		summary.IsBestialFailureMessage = rsumm.colorBuffer.String()
+	}
+
+	if summary.IsMessyCriticalMessage != "" {
+		rsumm.colorBuffer.Reset()
+		rsumm.colorprofileWriter.WriteString(rsumm.SummaryStyles.IsMessyCriticalMessageStyle.Render(summary.IsMessyCriticalMessage))
+		summary.IsMessyCriticalMessage = rsumm.colorBuffer.String()
+	}
+
+	return summary
 }

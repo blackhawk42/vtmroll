@@ -2,7 +2,9 @@ package fmtbuiltins
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 	"github.com/blackhawk42/vtmroll/pkg/vtmroll"
@@ -32,6 +34,24 @@ var BUILTIN_FORMATFUNCTION_ASCII DieFormatFunction = func(roll int, rollType vtm
 	}
 }
 
+var numericRegex = regexp.MustCompile(`\d+`)
+
+var BUILTIN_PARSER_NUMERIC_ASCII vtmrollfmt.VTMRollResultDiceParser = vtmrollfmt.VTMRollResultDiceParserFunc(func(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error) {
+	rollsInt := make([]int, 0, len(rolls))
+
+	for _, roll := range rolls {
+		rollString := numericRegex.FindString(roll)
+		rollInt, err := strconv.Atoi(rollString)
+		if err != nil {
+			return vtmroll.VTMRollerResult{}, fmt.Errorf("while trying to convert %s to a number: %w", rollString, err)
+		}
+
+		rollsInt = append(rollsInt, rollInt)
+	}
+
+	return vtmroll.NewVTMRollerResult(rollsInt, roller, hungerDice), nil
+})
+
 var BUILTIN_FORMATFUNCTION_CLASSIC_SIMPLE DieFormatFunction = func(roll int, rollType vtmroll.RollType) string {
 	switch rollType {
 	case vtmroll.NormalSuccess:
@@ -47,7 +67,7 @@ var BUILTIN_FORMATFUNCTION_CLASSIC_SIMPLE DieFormatFunction = func(roll int, rol
 	case vtmroll.HalfMessyCritical:
 		return "٭☥٭"
 	case vtmroll.PossibleBestialFailure:
-		return "○"
+		return "●"
 	default:
 		return fmt.Sprintf("%d", roll)
 	}
@@ -68,11 +88,24 @@ var BUILTIN_FORMATFUNCTION_CLASSIC_DETAILED DieFormatFunction = func(roll int, r
 	case vtmroll.HalfMessyCritical:
 		return "{٭☥٭}"
 	case vtmroll.PossibleBestialFailure:
-		return "<○>"
+		return "<●>"
 	default:
 		return fmt.Sprintf("%d", roll)
 	}
 }
+
+var BUILTIN_PARSER_CLASSIC vtmrollfmt.VTMRollResultDiceParser = vtmrollfmt.VTMRollResultDiceParserFunc(func(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error) {
+	rollsInt := make([]int, 0, len(rolls))
+
+	for i, roll := rolls {
+		switch {
+			case strings.Contains(roll, "*☥*"):
+				rollsInt = append(rollsInt, roller.RollUpperLimit)
+			case strings.Contains(roll, "☥"):
+					rollsInt = append(rollsInt, roller.SuccessThreshold)
+		}
+	}
+})
 
 var BUILTIN_DICESTYLES_ANSI DiceStyles
 

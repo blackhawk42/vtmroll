@@ -12,6 +12,16 @@ func (f VTMRollResultDiceFormatterFunc) FormatDice(vtmres vtmroll.VTMRollerResul
 	return f(vtmres)
 }
 
+type VTMRollResultDiceParser interface {
+	Parse(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error)
+}
+
+type VTMRollResultDiceParserFunc func(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error)
+
+func (f VTMRollResultDiceParserFunc) Parse(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error) {
+	return f(rolls, roller)
+}
+
 type VTMRollResultSummaryMessages struct {
 	SuccessesMessage        string
 	IsCriticalMessage       string

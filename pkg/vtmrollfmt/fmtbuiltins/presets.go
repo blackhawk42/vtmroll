@@ -34,16 +34,19 @@ var BUILTIN_FORMATFUNCTION_ASCII DieFormatFunction = func(roll int, rollType vtm
 	}
 }
 
-var numericRegex = regexp.MustCompile(`\d+`)
+var numericFormatRegex = regexp.MustCompile(`^(\[\d+\]|\d+|\{\d+\}|\*\d+\*|\*\{\d+\}\*|<\d+>)$`)
 
 var BUILTIN_PARSER_NUMERIC_ASCII vtmrollfmt.VTMRollResultDiceParser = vtmrollfmt.VTMRollResultDiceParserFunc(func(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error) {
 	rollsInt := make([]int, 0, len(rolls))
 
 	for _, roll := range rolls {
-		rollString := numericRegex.FindString(roll)
-		rollInt, err := strconv.Atoi(rollString)
+		if !numericFormatRegex.MatchString(roll) {
+			return vtmroll.VTMRollerResult{}, fmt.Errorf("unrecognized roll format: %s", roll)
+		}
+
+		rollInt, err := strconv.Atoi(strings.Trim(roll, "[]{}*<>"))
 		if err != nil {
-			return vtmroll.VTMRollerResult{}, fmt.Errorf("while trying to convert %s to a number: %w", rollString, err)
+			return vtmroll.VTMRollerResult{}, fmt.Errorf("while trying to convert %s to a number: %w", roll, err)
 		}
 
 		rollsInt = append(rollsInt, rollInt)
@@ -97,14 +100,24 @@ var BUILTIN_FORMATFUNCTION_CLASSIC_DETAILED DieFormatFunction = func(roll int, r
 var BUILTIN_PARSER_CLASSIC vtmrollfmt.VTMRollResultDiceParser = vtmrollfmt.VTMRollResultDiceParserFunc(func(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error) {
 	rollsInt := make([]int, 0, len(rolls))
 
-	for i, roll := rolls {
+	for _, roll := range rolls {
 		switch {
-			case strings.Contains(roll, "*☥*"):
-				rollsInt = append(rollsInt, roller.RollUpperLimit)
-			case strings.Contains(roll, "☥"):
-					rollsInt = append(rollsInt, roller.SuccessThreshold)
+		case strings.Contains(roll, "٭☥٭"):
+			rollsInt = append(rollsInt, roller.RollUpperLimit)
+		case strings.Contains(roll, "☥"):
+			rollsInt = append(rollsInt, roller.SuccessThreshold)
+		case strings.Contains(roll, "●"):
+			rollsInt = append(rollsInt, roller.RollLowerLimit)
+		default:
+			if roll != "○" {
+				return vtmroll.VTMRollerResult{}, fmt.Errorf("unrecognized value: %s", roll)
+			}
+
+			rollsInt = append(rollsInt, roller.SuccessThreshold-1)
 		}
 	}
+
+	return vtmroll.NewVTMRollerResult(rollsInt, roller, hungerDice), nil
 })
 
 var BUILTIN_DICESTYLES_ANSI DiceStyles

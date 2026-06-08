@@ -19,7 +19,7 @@ type VTMRollResultDiceParser interface {
 type VTMRollResultDiceParserFunc func(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error)
 
 func (f VTMRollResultDiceParserFunc) Parse(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error) {
-	return f(rolls, roller)
+	return f(rolls, roller, hungerDice)
 }
 
 type VTMRollResultSummaryMessages struct {

@@ -89,11 +89,16 @@ func lastPair(n int) int {
 	}
 }
 
-// NewVTMRollerResult constructs a VTMRollerResult by analyzing the given rolls against the roller's configuration.
+// NewVTMRollerResult constructs a VTMRollerResult by analyzing the given rolls
+// against the roller's configuration.
 //
-// It computes all success locations, critical pairs, and special failure conditions based on the threshold and upper limit.
+// It computes all success locations, critical pairs, and special failure conditions
+// based on the threshold and upper limit.
 //
 // rolls is copied internally, so modifying the original will not alter the final struct.
+//
+// The VTMRoller is only taken for its rules. No rolls are made and the state of
+// the RNG is untouched.
 func NewVTMRollerResult(rolls []int, vtmr *VTMRoller, hungerDice int) VTMRollerResult {
 	innerRolls := make([]int, len(rolls))
 	copy(innerRolls, rolls)
@@ -236,29 +241,41 @@ func (vtmres VTMRollerResult) Len() int {
 	return len(vtmres.rolls)
 }
 
-// VTMRoller executes dice rolls for Vampire: The Masquerade 5th Edition using a configured threshold and die range.
+// VTMRoller executes dice rolls for Vampire: The Masquerade 5th Edition using a
+// configured threshold and die range.
 //
-// VTMRoller is not thread-safe; do not modify fields or call methods concurrently from multiple goroutines.
+// VTMRoller is not thread-safe; do not modify fields or call methods concurrently
+// from multiple goroutines.
 type VTMRoller struct {
-	// Rand is the random source for the roller. It is initialized with a unique seed by default,
-	// but can be overridden with a custom *rand.Rand for reproducible results (useful in tests).
+	// Rand is the random source for the roller.
+	//
+	// It is normally initialized with a unique seed by default, but can be overridden
+	// with a custom *rand.Rand for reproducible results (useful in tests).
 	Rand *rand.Rand
 
-	// RollLowerLimit is the minimum value a die can roll (inclusive). Default for standard VTM5 is 1.
+	// RollLowerLimit is the minimum value a die can roll (inclusive).
+	//
+	// Default for standard VTM5 is 1.
 	RollLowerLimit int
 
-	// RollUpperLimit is the maximum value a die can roll (inclusive). Default for standard VTM5 is 10.
+	// RollUpperLimit is the maximum value a die can roll (inclusive). Default
+	// for standard VTM5 is 10.
+	//
 	// Rolls matching this value are half-criticals and can form critical pairs.
 	RollUpperLimit int
 
-	// SuccessThreshold is the minimum roll value (inclusive) needed for a success. Default for standard VTM5 is 6.
+	// SuccessThreshold is the minimum roll value (inclusive) needed for a success.
+	//
+	// Default for standard VTM5 is 6.
 	SuccessThreshold int
 }
 
-// NewVTMRoller creates a new roller for VTM dice with default configuration and a unique random source.
+// NewVTMRoller creates a new roller for VTM dice with default configuration and
+// a unique random source.
 //
-// Default values are the standard ones for VTM: RollLowerLimit = 1, RollUpperLimit = 10, SuccessThreshold = 6.
-// The Rand field is initialized with a unique seed from the system RNG.
+// Default values are the standard ones for VTM: RollLowerLimit = 1,
+// RollUpperLimit = 10, SuccessThreshold = 6. The Rand field is initialized with
+// a unique seed from the system RNG.
 //
 // For reproducible results in tests, override the Rand field after construction:
 //
@@ -321,6 +338,7 @@ func (vtmr *VTMRoller) Roll(pool int, hungerDice int) VTMRollerResult {
 // ReRoll re-rolls specified dice from a prior roll, creating a new result with updated outcomes.
 //
 // Hunger dice cannot be rerolled. Indices must be valid (0-based, within pool size, and not hunger dice).
+//
 // Returns an error if any index is invalid or refers to a hunger die.
 func (vtmr *VTMRoller) ReRoll(oldResult VTMRollerResult, rerollPlaces ...int) (VTMRollerResult, error) {
 	newRolls := make([]int, len(oldResult.rolls))

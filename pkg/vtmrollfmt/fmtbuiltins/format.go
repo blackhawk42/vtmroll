@@ -1,3 +1,5 @@
+// Package fmtbuiltins provides built-in implementations of the formatters,
+// parsers, and style presets defined in vtmrollfmt.
 package fmtbuiltins
 
 import (
@@ -9,6 +11,7 @@ import (
 	"github.com/charmbracelet/colorprofile"
 )
 
+// DiceStyles holds lipgloss styles for each die roll type.
 type DiceStyles struct {
 	NormalSuccessStyle lipgloss.Style
 
@@ -25,6 +28,7 @@ type DiceStyles struct {
 	PossibleBestialFailureStyle lipgloss.Style
 }
 
+// NewDiceStyle returns a DiceStyles with all styles set to their zero value.
 func NewDiceStyle() DiceStyles {
 	return DiceStyles{
 		NormalSuccessStyle:          lipgloss.NewStyle(),
@@ -37,6 +41,15 @@ func NewDiceStyle() DiceStyles {
 	}
 }
 
+// DieFormatFunction converts a single die roll and its RollType into a string
+// representation.
+type DieFormatFunction func(roll int, rollType vtmroll.RollType) string
+
+// DiceFormatter formats VTMRollerResult dice by applying a DieFormatFunction
+// and styling each result with the corresponding DiceStyles.
+//
+// The DiceFormatter includes a colorprofile.Profile (a companion library to lipgloss).
+// This allows to easily downgrade or completely deactivate ANSI coloring sequencies.
 type DiceFormatter struct {
 	DiceStyles DiceStyles
 
@@ -46,8 +59,9 @@ type DiceFormatter struct {
 	formatFunction DieFormatFunction
 }
 
-type DieFormatFunction func(roll int, rollType vtmroll.RollType) string
-
+// NewDiceFormatter creates a DiceFormatter.
+//
+// If formatFunction is nil, BUILTIN_FORMATFUNCTION_NUMERIC is used.
 func NewDiceFormatter(
 	formatFunction DieFormatFunction,
 	diceStyles DiceStyles,
@@ -113,6 +127,7 @@ func (fmtter *DiceFormatter) FormatDice(vtmres vtmroll.VTMRollerResult) []string
 	return results
 }
 
+// SummaryStyles holds lipgloss styles for each summary message category.
 type SummaryStyles struct {
 	SuccessesMessageStyle        lipgloss.Style
 	IsCriticalMessageStyle       lipgloss.Style
@@ -121,6 +136,8 @@ type SummaryStyles struct {
 	IsMessyCriticalMessageStyle  lipgloss.Style
 }
 
+// NewSummaryStyles returns a SummaryStyles with all styles set to their zero
+// value.
 func NewSummaryStyles() SummaryStyles {
 	return SummaryStyles{
 		SuccessesMessageStyle:        lipgloss.NewStyle(),
@@ -131,8 +148,14 @@ func NewSummaryStyles() SummaryStyles {
 	}
 }
 
+// SummaryFormatFunction generates a VTMRollResultSummaryMessages from a
+// VTMRollerResult.
 type SummaryFormatFunction func(result vtmroll.VTMRollerResult) vtmrollfmt.VTMRollResultSummaryMessages
 
+// ResultSummarizer formats a VTMRollerResult into styled summary messages.
+//
+// The ResultSummarizer includes a colorprofile.Profile (a companion library to lipgloss).
+// This allows to easily downgrade or completely deactivate ANSI coloring sequencies.
 type ResultSummarizer struct {
 	SummaryStyles SummaryStyles
 
@@ -142,6 +165,8 @@ type ResultSummarizer struct {
 	colorBuffer        *strings.Builder
 }
 
+// NewResultSummarizer creates a ResultSummarizer. If summaryFormatFunction is
+// nil, BUILTIN_SUMMARYFORMATFUNCTION_SIMPLE is used.
 func NewResultSummarizer(
 	summarizeStyles SummaryStyles,
 	summaryFormatFunction SummaryFormatFunction,

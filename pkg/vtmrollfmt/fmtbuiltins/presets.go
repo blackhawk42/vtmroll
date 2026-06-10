@@ -11,8 +11,13 @@ import (
 	"github.com/blackhawk42/vtmroll/pkg/vtmrollfmt"
 )
 
+// BUILTIN_FORMATFUNCTION_NUMERIC is a DieFormatFunction that formats every die
+// as its plain numeric value.
 var BUILTIN_FORMATFUNCTION_NUMERIC DieFormatFunction = func(roll int, rollType vtmroll.RollType) string { return strconv.Itoa(roll) }
 
+// BUILTIN_FORMATFUNCTION_ASCII is a DieFormatFunction that uses ASCII
+// delimiters to distinguish die types (e.g. [10] for normal success, {1} for
+// hunger success, *10* for critical, etc.).
 var BUILTIN_FORMATFUNCTION_ASCII DieFormatFunction = func(roll int, rollType vtmroll.RollType) string {
 	switch rollType {
 	case vtmroll.NormalSuccess:
@@ -36,6 +41,8 @@ var BUILTIN_FORMATFUNCTION_ASCII DieFormatFunction = func(roll int, rollType vtm
 
 var numericFormatRegex = regexp.MustCompile(`^(\[\d+\]|\d+|\{\d+\}|\*\d+\*|\*\{\d+\}\*|<\d+>)$`)
 
+// BUILTIN_PARSER_NUMERIC_ASCII parses rolls produced by
+// BUILTIN_FORMATFUNCTION_ASCII back into a VTMRollerResult.
 var BUILTIN_PARSER_NUMERIC_ASCII vtmrollfmt.VTMRollResultDiceParser = vtmrollfmt.VTMRollResultDiceParserFunc(func(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error) {
 	rollsInt := make([]int, 0, len(rolls))
 
@@ -55,6 +62,9 @@ var BUILTIN_PARSER_NUMERIC_ASCII vtmrollfmt.VTMRollResultDiceParser = vtmrollfmt
 	return vtmroll.NewVTMRollerResult(rollsInt, roller, hungerDice), nil
 })
 
+// BUILTIN_FORMATFUNCTION_CLASSIC_SIMPLE is a DieFormatFunction that uses
+// classic VtM symbols (ankh, circle) without distinguishing hunger visually
+// from normal dice.
 var BUILTIN_FORMATFUNCTION_CLASSIC_SIMPLE DieFormatFunction = func(roll int, rollType vtmroll.RollType) string {
 	switch rollType {
 	case vtmroll.NormalSuccess:
@@ -76,6 +86,9 @@ var BUILTIN_FORMATFUNCTION_CLASSIC_SIMPLE DieFormatFunction = func(roll int, rol
 	}
 }
 
+// BUILTIN_FORMATFUNCTION_CLASSIC_DETAILED is a DieFormatFunction that uses
+// classic VtM symbols with hunger dice wrapped in braces and bestial failures
+// in angle brackets for added distinction.
 var BUILTIN_FORMATFUNCTION_CLASSIC_DETAILED DieFormatFunction = func(roll int, rollType vtmroll.RollType) string {
 	switch rollType {
 	case vtmroll.NormalSuccess:
@@ -97,6 +110,8 @@ var BUILTIN_FORMATFUNCTION_CLASSIC_DETAILED DieFormatFunction = func(roll int, r
 	}
 }
 
+// BUILTIN_PARSER_CLASSIC parses rolls produced by either
+// BUILTIN_FORMATFUNCTION_CLASSIC_SIMPLE or BUILTIN_FORMATFUNCTION_CLASSIC_DETAILED.
 var BUILTIN_PARSER_CLASSIC vtmrollfmt.VTMRollResultDiceParser = vtmrollfmt.VTMRollResultDiceParserFunc(func(rolls []string, roller *vtmroll.VTMRoller, hungerDice int) (vtmroll.VTMRollerResult, error) {
 	rollsInt := make([]int, 0, len(rolls))
 
@@ -120,8 +135,12 @@ var BUILTIN_PARSER_CLASSIC vtmrollfmt.VTMRollResultDiceParser = vtmrollfmt.VTMRo
 	return vtmroll.NewVTMRollerResult(rollsInt, roller, hungerDice), nil
 })
 
+// BUILTIN_DICESTYLES_ANSI is a DiceStyles preset with ANSI color assignments
+// for terminal display.
 var BUILTIN_DICESTYLES_ANSI DiceStyles
 
+// BUILTIN_SUMMARYSTYLES_ANSI is a SummaryStyles preset with ANSI color
+// assignments for terminal display.
 var BUILTIN_SUMMARYSTYLES_ANSI SummaryStyles
 
 func init() {
@@ -141,6 +160,9 @@ func init() {
 	BUILTIN_SUMMARYSTYLES_ANSI.IsMessyCriticalMessageStyle = BUILTIN_DICESTYLES_ANSI.HalfMessyCriticalStyle
 }
 
+// BUILTIN_SUMMARYFORMATFUNCTION_SIMPLE generates a one-line summary with
+// successes count and any special conditions (critical, total failure, bestial
+// failure, messy critical).
 var BUILTIN_SUMMARYFORMATFUNCTION_SIMPLE = func(result vtmroll.VTMRollerResult) vtmrollfmt.VTMRollResultSummaryMessages {
 	summary := vtmrollfmt.VTMRollResultSummaryMessages{}
 

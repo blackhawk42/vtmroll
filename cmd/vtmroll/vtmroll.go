@@ -32,7 +32,7 @@ func main() {
 	)
 
 	var summ vtmrollfmt.VTMRollResultSummarizer = fmtbuiltins.NewResultSummarizer(
-		fmtbuiltins.BUILTIN_SUMMARYSTLES_ANSI,
+		fmtbuiltins.BUILTIN_SUMMARYSTYLES_ANSI,
 		fmtbuiltins.BUILTIN_SUMMARYFORMATFUNCTION_SIMPLE,
 		colorprofile.NoTTY,
 	)

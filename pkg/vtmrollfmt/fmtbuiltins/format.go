@@ -72,6 +72,8 @@ func NewDiceFormatter(
 	}
 }
 
+var _ vtmrollfmt.VTMRollResultDiceFormatter = (*DiceFormatter)(nil)
+
 func (fmtter *DiceFormatter) FormatDice(vtmres vtmroll.VTMRollerResult) []string {
 	results := make([]string, 0, vtmres.Len())
 
@@ -142,11 +144,11 @@ type ResultSummarizer struct {
 
 func NewResultSummarizer(
 	summarizeStyles SummaryStyles,
-	summarSummaryFormatFunction SummaryFormatFunction,
+	summaryFormatFunction SummaryFormatFunction,
 	colorProfile colorprofile.Profile,
 ) *ResultSummarizer {
-	if summarSummaryFormatFunction == nil {
-		summarSummaryFormatFunction = BUILTIN_SUMMARYFORMATFUNCTION_SIMPLE
+	if summaryFormatFunction == nil {
+		summaryFormatFunction = BUILTIN_SUMMARYFORMATFUNCTION_SIMPLE
 	}
 
 	colorBuffer := new(strings.Builder)
@@ -156,12 +158,14 @@ func NewResultSummarizer(
 	colorprofileWriter.Profile = colorProfile
 
 	return &ResultSummarizer{
-		summaryFormatFunction: summarSummaryFormatFunction,
+		summaryFormatFunction: summaryFormatFunction,
 		SummaryStyles:         summarizeStyles,
 		colorprofileWriter:    colorprofileWriter,
 		colorBuffer:           colorBuffer,
 	}
 }
+
+var _ vtmrollfmt.VTMRollResultSummarizer = (*ResultSummarizer)(nil)
 
 func (rsumm *ResultSummarizer) Summarize(vtmres vtmroll.VTMRollerResult) vtmrollfmt.VTMRollResultSummaryMessages {
 	summary := rsumm.summaryFormatFunction(vtmres)

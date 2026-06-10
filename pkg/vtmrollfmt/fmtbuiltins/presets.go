@@ -122,7 +122,7 @@ var BUILTIN_PARSER_CLASSIC vtmrollfmt.VTMRollResultDiceParser = vtmrollfmt.VTMRo
 
 var BUILTIN_DICESTYLES_ANSI DiceStyles
 
-var BUILTIN_SUMMARYSTLES_ANSI SummaryStyles
+var BUILTIN_SUMMARYSTYLES_ANSI SummaryStyles
 
 func init() {
 	BUILTIN_DICESTYLES_ANSI = NewDiceStyle()
@@ -134,11 +134,11 @@ func init() {
 	BUILTIN_DICESTYLES_ANSI.HalfMessyCriticalStyle = lipgloss.NewStyle().Foreground(lipgloss.BrightYellow).Bold(true)
 	BUILTIN_DICESTYLES_ANSI.PossibleBestialFailureStyle = lipgloss.NewStyle().Foreground(lipgloss.BrightRed).Bold(true)
 
-	BUILTIN_SUMMARYSTLES_ANSI.SuccessesMessageStyle = lipgloss.NewStyle()
-	BUILTIN_SUMMARYSTLES_ANSI.IsCriticalMessageStyle = BUILTIN_DICESTYLES_ANSI.HalfCriticalStyle
-	BUILTIN_SUMMARYSTLES_ANSI.IsTotalFailureMessageStyle = BUILTIN_DICESTYLES_ANSI.NormalFailureStyle
-	BUILTIN_SUMMARYSTLES_ANSI.IsBestialFailureMessageStyle = BUILTIN_DICESTYLES_ANSI.PossibleBestialFailureStyle
-	BUILTIN_SUMMARYSTLES_ANSI.IsMessyCriticalMessageStyle = BUILTIN_DICESTYLES_ANSI.HalfMessyCriticalStyle
+	BUILTIN_SUMMARYSTYLES_ANSI.SuccessesMessageStyle = lipgloss.NewStyle()
+	BUILTIN_SUMMARYSTYLES_ANSI.IsCriticalMessageStyle = BUILTIN_DICESTYLES_ANSI.HalfCriticalStyle
+	BUILTIN_SUMMARYSTYLES_ANSI.IsTotalFailureMessageStyle = BUILTIN_DICESTYLES_ANSI.NormalFailureStyle
+	BUILTIN_SUMMARYSTYLES_ANSI.IsBestialFailureMessageStyle = BUILTIN_DICESTYLES_ANSI.PossibleBestialFailureStyle
+	BUILTIN_SUMMARYSTYLES_ANSI.IsMessyCriticalMessageStyle = BUILTIN_DICESTYLES_ANSI.HalfMessyCriticalStyle
 }
 
 var BUILTIN_SUMMARYFORMATFUNCTION_SIMPLE = func(result vtmroll.VTMRollerResult) vtmrollfmt.VTMRollResultSummaryMessages {
